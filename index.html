@@ -11,12 +11,27 @@
     .then(response => response.json())
     .then(response => { console.log(response.pets); pets = response.pets })"
   >
-    <!-- Header section -->
-    <!-- Pet Cards-->
+
     <div class="container mx-auto">
-      <template x-for="(pet, index) in pets" :key="index">
-        <h1 x-text="pet.pet_name"></h1>
-      </template>
+      <!-- Header section -->
+      <!-- Pet Cards-->
+      <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3">
+        <template x-for="(pet, index) in pets" :key="index">
+          <div class="bg-white-default rounded-lg shadow-icon-shadow">
+            <img class="min-w-full" x-bind:src="pet.large_results_photo_url">
+            <div class="px-15 py-10 space-y-10">
+              <div>
+                <p x-text="pet.pet_name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
+                <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
+              </div>
+              <div>
+                <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
     </div>
   </body>
   <script>
