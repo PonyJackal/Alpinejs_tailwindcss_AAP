@@ -6,70 +6,111 @@
     <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.js" defer></script>
   </head>
   <body 
-    x-data="data()"
-    x-init="fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&output=json')
-    .then(response => response.json())
-    .then(response => { pets = response.pets } )"
+    x-data="globalScope()"
+    x-init="fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
+        .then(response => response.json())
+        .then(response => { // initialize pets
+          result = response.pets;
+          // add details to pet
+          result.forEach(async pet => {
+            const res = await fetch(pet.details_url);
+            const json = await res.json();
+            pets.push({
+              ...pet,
+              details: json.pet
+            })
+          });
+          filteredPets = pets;
+          isLoading = false; 
+          isError = false; 
+        } )
+        .catch(err => { // handle errors
+          isLoading = false; 
+          isError = true;
+        });"
+    @filter-change="filterPets($event.detail.filterStatus)"
   >
-
     <div class="container mx-auto py-80 space-y-40">
-      <!-- Header section -->
-      <div class="relative text-left w-full tablet:w-3/12 space-y-10">
-        <button type="button" @click="openFilter = !openFilter" class="inline-flex justify-between items-center w-full border border-gray-3 rounded-md shadow-sm px-15 py-5 text-h4 bg-white-default" id="options-menu" aria-haspopup="true" aria-expanded="true">
-          <span x-text="filteredStatus"></span>
+      <!-- Filter Component -->
+      <div class="relative text-left w-full tablet:w-3/12 space-y-10" x-data="filterScope()">
+        <button type="button" @click="toggle" class="inline-flex justify-between items-center w-full border border-gray-3 rounded-md shadow-sm px-15 py-5 text-h4 bg-white-default" id="options-menu" aria-haspopup="true" aria-expanded="true">
+          <span x-text="text"></span>
           <svg class="h-25 w-25" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
           </svg>
         </button>
-        <div class="bg-white rounded-md border border-gray-3" x-show="openFilter === true">
-          <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="openFilter=false;filteredStatus='Act quickly'">Act quickly</div>
-          <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="openFilter=false;filteredStatus='Special needs'">Special needs</div>
-          <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="openFilter=false;filteredStatus='Adopted'">Adopted</div>
-        </div>
-      </div>
-      <!-- Pet Cards-->
-      <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3">
-        <template x-for="(pet, index) in pets" :key="index">
-          <div class="bg-white-default rounded-lg shadow-icon-shadow overflow-hidden c-card">
-            <img class="min-w-full" x-bind:src="pet.large_results_photo_url">
-            <div class="px-15 py-10 space-y-10">
-              <div>
-                <p x-text="pet.pet_name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
-                <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
-              </div>
-              <div>
-                <p x-text="`${pet.primary_breed} ${pet.primary_breed}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
-                <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
-              </div>
-            </div>
+        <template x-if="open">
+          <div class="bg-white rounded-md border border-gray-3">
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'all'});close('All')">All</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'act_quickly'});close('Act quickly')">Act quickly</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'special_needs'});close('Special needs')">Special needs</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'adopted'});close('Adopted')">Adopted</div>
           </div>
         </template>
       </div>
+      <!-- Loading -->
+      <template x-if="isLoading">
+        <h1>Loading ...</h1>
+      </template>
+      <!-- Error occurs-->
+      <template x-if="isError">
+        <h1>Something Went Wrong to Fetch Pets Data</h1>
+      </template>
+      <!-- No data-->
+      <template x-if="filteredPets.length === 0">
+        <h1>No Matched Pets</h1>
+      </template>
+      <!-- Pet Cards-->
+      <template x-if="filteredPets.length > 0">
+        <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3">
+          <template x-for="(pet, index) in filteredPets" :key="index">
+            <!-- pet card template-->
+            <div class="bg-white-default rounded-lg shadow-icon-shadow overflow-hidden c-card" x:if="">
+              <!-- hero image-->
+              <div class="min-w-full">
+                <img class="w-full" x-bind:src="pet.large_results_photo_url">
+                <p class="">Act quickly</p>
+              </div>
+              <div class="px-15 py-10 space-y-10">
+                <div>
+                  <p x-text="pet.pet_name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
+                  <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
+                </div>
+                <div>
+                  <p x-text="`${pet.details.sex}, ${pet.details.age}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                  <p x-text="`${pet.details.addr_city}, ${pet.details.addr_state_code}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
     </div>
   </body>
   <script>
-    const pet = {
-      name: '',
-      details: {},
-      getAddr: () => `${this.details.addr_city} ${this.details.addr_state_code}`
-    }
-
-    const data = () => ({
+    //global scope
+    const globalScope = () => ({
+      //fetch status
+      isLoading: true,
+      isError: false,
       pets: [],
-      filteredStatus: "Filter",
-      openFilter: false,
-      getDetails: async () => {
-        const response = await fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&output=json');
-        this.pets = response.pets;
+      filteredPets: [],
+      //filter status
+      filterPets(filterStatus){
+        this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details[filterStatus] === 1) : this.pets;
+      }
+    })
+    //filter scope
+    const filterScope = () => ({
+      open: false,
+      text: "All",
+      toggle(){
+        this.open = !this.open
+      },
+      close(text = 'All'){
+        this.open = false
+        this.text = text
       }
     })
   </script>
-  <style>
-    .c-card img{
-      transition: transform .3s ease-in-out; 
-    }
-    .c-card img:hover{
-      transform: scale(1.05);
-    }
-  </style>
 </html>
