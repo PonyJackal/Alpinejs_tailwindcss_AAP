@@ -4,5 +4,21 @@
     <link href="/styles/tailwind.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.js" defer></script>
   </head>
-  <body></body>
+  <body 
+    x-data="pets()"
+    x-init="fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&output=json')
+  .then(response => { pets = response.pets })"
+  >
+  
+  </body>
+  <script>
+    const pets = () => ({
+      pets: [],
+      filterStatus: "",
+      getPets: async () => {
+        const response = await fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&output=json');
+        this.pets = response.pets;
+      }
+    })
+  </script>
 </html>
