@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <link href="styles/tailwind.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.js" defer></script>
+    <script src="js/app.js"></script>
   </head>
   <body 
     x-data="globalScope()"
@@ -53,13 +54,13 @@
                 @add-heart="heart()">
                 <div class="flex flex-row justify-between tablet:flex-col space-x-10">
                   <!-- hero image-->
-                  <div class="h-full w-256 tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
+                  <div class="h-full w-256 min-w-max tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
                     <!-- <template x-if="act_quickly || adopted"> -->
                       <p class="mt-210 text-h4 text-center" :class="setStatusBackgroundColor()" x-html="setStatusText()"></p>
                     <!-- </template> -->
                   </div>
                   <!-- pet info -->
-                  <div class="px-15 py-10 space-y-10 relative">
+                  <div class="px-15 py-10 flex flex-col justify-around relative min-w-max tablet:space-y-10">
                     <div>
                       <p x-text="name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
                       <p x-text="breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
@@ -84,139 +85,4 @@
       </template>
     </div>
   </body>
-  <script>
-    //global scope
-    const globalScope = () => ({
-      //fetch status
-      isLoading: true,
-      isError: false,
-      pets: [],
-      filteredPets: [],
-      //filter status
-      filterPets(filterStatus){
-        this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details.adopted === 1) : this.pets;
-      },
-      fetchPets(){
-        fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
-        .then(response => response.json())
-        .then(response => { // initialize pets
-          result = response.pets;
-          // add details to pet
-          result.forEach(async pet => {
-            const res = await fetch(pet.details_url);
-            const json = await res.json();
-            //add fake adopted data
-            this.pets.push({
-              ...pet,
-              details: {
-                ...json.pet,
-                adopted: Math.random() < 0.3,
-                special_needs: json.pet.special_needs || false
-              }
-            })
-          });
-          this.filteredPets = this.pets;
-          this.isLoading = false; 
-          this.isError = false; 
-
-          console.log("pets", this.pets)
-        } )
-        .catch(err => { // handle errors
-          this.isLoading = false; 
-          this.isError = true;
-        });
-      }
-    })
-    //filter scope
-    const filterScope = () => ({
-      open: false,
-      text: "All",
-      toggle(){
-        this.open = !this.open
-      },
-      close(text = 'All', $dispatch){
-        this.open = false
-        this.text = text
-        //dispatch filter-change event
-        const statusObject = {
-          'All': 'all',
-          'Act quickly': 'act_quickly',
-          'Special needs': 'special_needs',
-          'Adopted': 'adopted'
-        }
-        $dispatch('filter-change', {filterStatus: statusObject[text]})
-      }
-    })
-    //pet scope
-    const petScope = () => ({
-      //pet info
-      name: "",
-      breed: "",
-      age: "",
-      sex: "",
-      address: "",
-      photoURL: "",
-      //pet status
-      act_quickly: false,
-      special_needs: false,
-      adopted: false,
-      isHeart: false,
-      //methods
-      heart(){
-        this.isHeart = !this.isHeart;
-        console.log(this.isHeart)
-      },
-      initPet($el){
-        const pet = JSON.parse($el.parentElement.dataset.pet)
-        this.name =pet.pet_name
-        this.breed =pet.primary_breed
-        this.sex =pet.details.sex
-        this.address = `${pet.details.addr_city}, ${pet.details.addr_state_code}`
-        this.age =pet.details.age
-        this.photoURL = pet.large_results_photo_url
-
-        this.adopted = pet.details.adopted
-        this.special_needs = pet.details.special_needs
-        this.act_quickly = pet.details.act_quickly
-      },
-      setStatusBackgroundColor(){
-        if(this.adopted)
-          return "bg-blue-default"
-        if(this.act_quickly)
-          return "bg-lemon-default"
-      },
-      setStatusText(){
-        if(this.adopted)
-          return "Adopted"
-        if(this.act_quickly)
-          return "Act quickly"
-        return "<span>&#8203;</span>"
-      }
-    })
-    //icon scope
-    const iconScope = () => ({
-      heart: false,
-      info: false,
-      isHeart: false,
-      initIcons($el){
-        this.isHeart = $el.parentElement.dataset.heart
-      },
-      heartHover() {
-        this.heart = true
-      },
-      heartLeave(){
-        this.heart = this.isHeart
-      },
-      infoHover() {
-        this.info = true
-      },
-      infoLeave(){
-        this.info = false
-      },
-      addHeart($dispatch){
-        this.isHeart = !this.isHeart
-        $dispatch('add-heart');
-      }
-    })
-  </script>
 </html>
