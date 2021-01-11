@@ -20,7 +20,7 @@
           </svg>
         </button>
         <template x-if="open">
-          <div class="bg-white rounded-md border border-gray-5">
+          <div class="rounded-md border border-gray-5 absolute z-50 bg-white-default w-full">
             <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('All', $dispatch)">All</div>
             <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('Act quickly', $dispatch)">Act quickly</div>
             <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('Special needs', $dispatch)">Special needs</div>
@@ -46,11 +46,17 @@
           <template x-for="(pet, index) in filteredPets" :key="index">
             <div :data-pet="JSON.stringify(pet)" :data-index="index">
               <!-- pet card template-->
-              <div class="flex flex-row justify-between tablet:flex-col bg-white-default relative rounded-lg shadow-icon-shadow overflow-hidden" x-data="petScope()" x-init="initPet($el)">
+              <div 
+                class="flex flex-row justify-between h-full tablet:flex-col bg-white-default relative rounded-lg shadow-icon-shadow overflow-hidden" 
+                x-data="petScope()" 
+                x-init="initPet($el)"
+                @add-heart="heart()">
                 <div class="flex flex-row justify-between tablet:flex-col space-x-10">
                   <!-- hero image-->
                   <div class="h-full w-256 tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
-                    <p class="mt-210 text-h4 text-center bg-lemon-default" x-bind:styles="setBackgroundColor()">Act quickly</p>
+                    <!-- <template x-if="act_quickly || adopted"> -->
+                      <p class="mt-210 text-h4 text-center" :class="setStatusBackgroundColor()" x-html="setStatusText()"></p>
+                    <!-- </template> -->
                   </div>
                   <!-- pet info -->
                   <div class="px-15 py-10 space-y-10 relative">
@@ -65,9 +71,11 @@
                   </div>
                 </div>
                 <!-- icons -->
-                <div class="flex flex-col	items-end	p-10 space-y-5" x-data="iconScope()">
-                  <a @mouseenter="heartHover" @mouseleave="heartLeave"><img class="w-30 h-30" x-bind:src="heart ? 'images/HeartIcon-HoverandActive.svg' : 'images/HeartIcon-Inactive.svg'" /></a>
-                  <a @mouseenter="infoHover" @mouseleave="infoLeave"><img class="w-30 h-30" x-bind:src="info ? 'images/InfoIcon-HoverandActive.svg' : 'images/InfoIcon-Inactive.svg'" /></a>
+                <div :data-heart="isHeart" class="absolute w-full">
+                  <div class="flex flex-col	items-end p-10 space-y-5" x-data="iconScope()" x-init="initIcons($el)">
+                    <a @mouseenter="heartHover" @mouseleave="heartLeave" @click="addHeart($dispatch)"><img class="w-30 h-30" x-bind:src="heart || isHeart ? 'images/HeartIcon-HoverandActive.svg' : 'images/HeartIcon-Inactive.svg'" /></a>
+                    <a @mouseenter="infoHover" @mouseleave="infoLeave"><img class="w-30 h-30" x-bind:src="info ? 'images/InfoIcon-HoverandActive.svg' : 'images/InfoIcon-Inactive.svg'" /></a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -78,7 +86,7 @@
   </body>
   <script>
     //global scope
-    window.globalScope = () => ({
+    const globalScope = () => ({
       //fetch status
       isLoading: true,
       isError: false,
@@ -86,7 +94,7 @@
       filteredPets: [],
       //filter status
       filterPets(filterStatus){
-        this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details[filterStatus] === 1) : this.pets;
+        this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details.adopted === 1) : this.pets;
       },
       fetchPets(){
         fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
@@ -97,14 +105,21 @@
           result.forEach(async pet => {
             const res = await fetch(pet.details_url);
             const json = await res.json();
+            //add fake adopted data
             this.pets.push({
               ...pet,
-              details: json.pet
+              details: {
+                ...json.pet,
+                adopted: Math.random() < 0.3,
+                special_needs: json.pet.special_needs || false
+              }
             })
           });
           this.filteredPets = this.pets;
           this.isLoading = false; 
           this.isError = false; 
+
+          console.log("pets", this.pets)
         } )
         .catch(err => { // handle errors
           this.isLoading = false; 
@@ -132,36 +147,24 @@
         $dispatch('filter-change', {filterStatus: statusObject[text]})
       }
     })
-    //icon scope
-    const iconScope = () => ({
-      heart: false,
-      info: false,
-      heartHover() {
-        this.heart = true
-      },
-      heartLeave(){
-        this.heart = false
-      },
-      infoHover() {
-        this.info = true
-      },
-      infoLeave(){
-        this.info = false
-      }
-    })
     //pet scope
     const petScope = () => ({
+      //pet info
       name: "",
       breed: "",
-      act_quickly: false,
-      special_needs: false,
       age: "",
       sex: "",
       address: "",
       photoURL: "",
+      //pet status
+      act_quickly: false,
+      special_needs: false,
+      adopted: false,
       isHeart: false,
-      addHeart(){
-        this.heart = true;
+      //methods
+      heart(){
+        this.isHeart = !this.isHeart;
+        console.log(this.isHeart)
       },
       initPet($el){
         const pet = JSON.parse($el.parentElement.dataset.pet)
@@ -171,6 +174,48 @@
         this.address = `${pet.details.addr_city}, ${pet.details.addr_state_code}`
         this.age =pet.details.age
         this.photoURL = pet.large_results_photo_url
+
+        this.adopted = pet.details.adopted
+        this.special_needs = pet.details.special_needs
+        this.act_quickly = pet.details.act_quickly
+      },
+      setStatusBackgroundColor(){
+        if(this.adopted)
+          return "bg-blue-default"
+        if(this.act_quickly)
+          return "bg-lemon-default"
+      },
+      setStatusText(){
+        if(this.adopted)
+          return "Adopted"
+        if(this.act_quickly)
+          return "Act quickly"
+        return "<span>&#8203;</span>"
+      }
+    })
+    //icon scope
+    const iconScope = () => ({
+      heart: false,
+      info: false,
+      isHeart: false,
+      initIcons($el){
+        this.isHeart = $el.parentElement.dataset.heart
+      },
+      heartHover() {
+        this.heart = true
+      },
+      heartLeave(){
+        this.heart = this.isHeart
+      },
+      infoHover() {
+        this.info = true
+      },
+      infoLeave(){
+        this.info = false
+      },
+      addHeart($dispatch){
+        this.isHeart = !this.isHeart
+        $dispatch('add-heart');
       }
     })
   </script>
