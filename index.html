@@ -7,78 +7,67 @@
   </head>
   <body 
     x-data="globalScope()"
-    x-init="fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
-        .then(response => response.json())
-        .then(response => { // initialize pets
-          result = response.pets;
-          // add details to pet
-          result.forEach(async pet => {
-            const res = await fetch(pet.details_url);
-            const json = await res.json();
-            pets.push({
-              ...pet,
-              details: json.pet
-            })
-          });
-          filteredPets = pets;
-          isLoading = false; 
-          isError = false; 
-        } )
-        .catch(err => { // handle errors
-          isLoading = false; 
-          isError = true;
-        });"
+    x-init="fetchPets()"
     @filter-change="filterPets($event.detail.filterStatus)"
   >
     <div class="container mx-auto py-80 space-y-40">
       <!-- Filter Component -->
       <div class="relative text-left w-full tablet:w-3/12 space-y-10" x-data="filterScope()">
-        <button type="button" @click="toggle" class="inline-flex justify-between items-center w-full border border-gray-3 rounded-md shadow-sm px-15 py-5 text-h4 bg-white-default" id="options-menu" aria-haspopup="true" aria-expanded="true">
+        <button type="button" @click="toggle" class="inline-flex justify-between items-center w-full border border-gray-5 rounded-md shadow-sm px-15 py-5 text-h4 bg-white-default" id="options-menu" aria-haspopup="true" aria-expanded="true">
           <span x-text="text"></span>
           <svg class="h-25 w-25" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
           </svg>
         </button>
         <template x-if="open">
-          <div class="bg-white rounded-md border border-gray-3">
-            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'all'});close('All')">All</div>
-            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'act_quickly'});close('Act quickly')">Act quickly</div>
-            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'special_needs'});close('Special needs')">Special needs</div>
-            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="$dispatch('filter-change', {filterStatus: 'adopted'});close('Adopted')">Adopted</div>
+          <div class="bg-white rounded-md border border-gray-5">
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('All', $dispatch)">All</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('Act quickly', $dispatch)">Act quickly</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('Special needs', $dispatch)">Special needs</div>
+            <div class="block px-15 py-5 text-black-default hover:bg-blue-2 hover:text-white-default text-h4" @click="close('Adopted', $dispatch)">Adopted</div>
           </div>
         </template>
       </div>
       <!-- Loading -->
       <template x-if="isLoading">
-        <h1>Loading ...</h1>
+        <p class="text-black-default text-h5 desktop:text-h3 font-normal">Loading ...</p>
       </template>
       <!-- Error occurs-->
       <template x-if="isError">
-        <h1>Something Went Wrong to Fetch Pets Data</h1>
+        <p class="text-black-default text-h5 desktop:text-h3 font-normal">Something Went Wrong to Fetch Pets Data</p>
       </template>
       <!-- No data-->
-      <template x-if="filteredPets.length === 0">
-        <h1>No Matched Pets</h1>
+      <template x-if="pets.length > 0 && filteredPets.length === 0">
+        <p class="text-black-default text-h5 desktop:text-h3 font-normal">No Matched Pets</p>
       </template>
       <!-- Pet Cards-->
-      <template x-if="filteredPets.length > 0">
-        <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3">
+      <template x-if="pets.length > 0 && filteredPets.length > 0">
+        <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3" x-ref="container">
           <template x-for="(pet, index) in filteredPets" :key="index">
-            <!-- pet card template-->
-            <div class="bg-white-default rounded-lg shadow-icon-shadow overflow-hidden c-card" x:if="">
-              <!-- hero image-->
-              <div class="min-w-full">
-                <img class="w-full" x-bind:src="pet.large_results_photo_url">
-                <p class="">Act quickly</p>
-              </div>
-              <div class="px-15 py-10 space-y-10">
-                <div>
-                  <p x-text="pet.pet_name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
-                  <p x-text="pet.primary_breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
+            <div :data-pet="JSON.stringify(pet)" :data-index="index">
+              <!-- pet card template-->
+              <div class="flex flex-row justify-between tablet:flex-col bg-white-default relative rounded-lg shadow-icon-shadow overflow-hidden" x-data="petScope()" x-init="initPet($el)">
+                <div class="flex flex-row justify-between tablet:flex-col space-x-10">
+                  <!-- hero image-->
+                  <div class="h-full w-256 tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
+                    <p class="mt-210 text-h4 text-center bg-lemon-default" x-bind:styles="setBackgroundColor()">Act quickly</p>
+                  </div>
+                  <!-- pet info -->
+                  <div class="px-15 py-10 space-y-10 relative">
+                    <div>
+                      <p x-text="name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
+                      <p x-text="breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
+                    </div>
+                    <div>
+                      <p x-text="`${sex}, ${age}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                      <p x-text="address" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p x-text="`${pet.details.sex}, ${pet.details.age}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
-                  <p x-text="`${pet.details.addr_city}, ${pet.details.addr_state_code}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                <!-- icons -->
+                <div class="flex flex-col	items-end	p-10 space-y-5" x-data="iconScope()">
+                  <a @mouseenter="heartHover" @mouseleave="heartLeave"><img class="w-30 h-30" x-bind:src="heart ? 'images/HeartIcon-HoverandActive.svg' : 'images/HeartIcon-Inactive.svg'" /></a>
+                  <a @mouseenter="infoHover" @mouseleave="infoLeave"><img class="w-30 h-30" x-bind:src="info ? 'images/InfoIcon-HoverandActive.svg' : 'images/InfoIcon-Inactive.svg'" /></a>
                 </div>
               </div>
             </div>
@@ -89,7 +78,7 @@
   </body>
   <script>
     //global scope
-    const globalScope = () => ({
+    window.globalScope = () => ({
       //fetch status
       isLoading: true,
       isError: false,
@@ -98,6 +87,29 @@
       //filter status
       filterPets(filterStatus){
         this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details[filterStatus] === 1) : this.pets;
+      },
+      fetchPets(){
+        fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
+        .then(response => response.json())
+        .then(response => { // initialize pets
+          result = response.pets;
+          // add details to pet
+          result.forEach(async pet => {
+            const res = await fetch(pet.details_url);
+            const json = await res.json();
+            this.pets.push({
+              ...pet,
+              details: json.pet
+            })
+          });
+          this.filteredPets = this.pets;
+          this.isLoading = false; 
+          this.isError = false; 
+        } )
+        .catch(err => { // handle errors
+          this.isLoading = false; 
+          this.isError = true;
+        });
       }
     })
     //filter scope
@@ -107,9 +119,58 @@
       toggle(){
         this.open = !this.open
       },
-      close(text = 'All'){
+      close(text = 'All', $dispatch){
         this.open = false
         this.text = text
+        //dispatch filter-change event
+        const statusObject = {
+          'All': 'all',
+          'Act quickly': 'act_quickly',
+          'Special needs': 'special_needs',
+          'Adopted': 'adopted'
+        }
+        $dispatch('filter-change', {filterStatus: statusObject[text]})
+      }
+    })
+    //icon scope
+    const iconScope = () => ({
+      heart: false,
+      info: false,
+      heartHover() {
+        this.heart = true
+      },
+      heartLeave(){
+        this.heart = false
+      },
+      infoHover() {
+        this.info = true
+      },
+      infoLeave(){
+        this.info = false
+      }
+    })
+    //pet scope
+    const petScope = () => ({
+      name: "",
+      breed: "",
+      act_quickly: false,
+      special_needs: false,
+      age: "",
+      sex: "",
+      address: "",
+      photoURL: "",
+      isHeart: false,
+      addHeart(){
+        this.heart = true;
+      },
+      initPet($el){
+        const pet = JSON.parse($el.parentElement.dataset.pet)
+        this.name =pet.pet_name
+        this.breed =pet.primary_breed
+        this.sex =pet.details.sex
+        this.address = `${pet.details.addr_city}, ${pet.details.addr_state_code}`
+        this.age =pet.details.age
+        this.photoURL = pet.large_results_photo_url
       }
     })
   </script>
