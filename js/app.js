@@ -39,7 +39,6 @@ const globalScope = () => ({
     filterPets(filterStatus){
         const filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details[filterStatus] == true) : this.pets
         this.filteredPets = [].concat(filteredPets)
-        console.log("updated", this.filteredPets)
     }
   })
   //filter scope
