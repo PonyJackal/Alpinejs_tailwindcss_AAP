@@ -43,7 +43,7 @@
       </template>
       <!-- Pet Cards-->
       <template x-if="pets.length > 0 && filteredPets.length > 0">
-        <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3" x-ref="container">
+        <div class="grid gap-1 grid-cols-1 tablet:grid-cols-3">
           <template x-for="(pet, index) in filteredPets" :key="index">
             <div :data-pet="JSON.stringify(pet)" :data-index="index">
               <!-- pet card template-->
@@ -54,19 +54,17 @@
                 @add-heart="heart()">
                 <div class="flex flex-row justify-between tablet:flex-col space-x-10">
                   <!-- hero image-->
-                  <div class="h-full w-256 min-w-max tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
-                    <!-- <template x-if="act_quickly || adopted"> -->
+                  <div class="h-full w-256 tablet:w-full relative object-cover bg-cover	bg-no-repeat bg-left-top" x-bind:style="`background-image: url(${photoURL})`">
                       <p class="mt-210 text-h4 text-center" :class="setStatusBackgroundColor()" x-html="setStatusText()"></p>
-                    <!-- </template> -->
                   </div>
                   <!-- pet info -->
-                  <div class="px-15 py-10 flex flex-col justify-around relative min-w-max tablet:space-y-10">
+                  <div class="px-15 py-10 flex flex-col justify-around relative tablet:space-y-10">
                     <div>
                       <p x-text="name" class="text-blue-default text-h4 desktop:text-h2 font-extra-bold"></p>
-                      <p x-text="breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>  
+                      <p x-text="breed" class="text-black-default text-h5 desktop:text-h4 font-bold"></p>
                     </div>
                     <div>
-                      <p x-text="`${sex}, ${age}`" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
+                      <p x-html="showAge()" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
                       <p x-text="address" class="text-black-default text-h5 desktop:text-h4 font-normal"></p>
                     </div>
                   </div>

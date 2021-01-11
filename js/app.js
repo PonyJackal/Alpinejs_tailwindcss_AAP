@@ -5,10 +5,7 @@ const globalScope = () => ({
     isError: false,
     pets: [],
     filteredPets: [],
-    //filter status
-    filterPets(filterStatus){
-        this.filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details.adopted === 1) : this.pets;
-    },
+    filterStatus: "all",
     fetchPets(){
         fetch('https://api.adoptapet.com/search/pet_search?key=e41b6bf1618d053c31d524d235j9hj7&geo_range=50&city_or_zip=47374&species=dog&end_number=6&output=json')
         .then(response => response.json())
@@ -23,21 +20,26 @@ const globalScope = () => ({
                     ...pet,
                     details: {
                         ...json.pet,
-                        adopted: Math.random() < 0.3,
-                        special_needs: json.pet.special_needs || false
+                        adopted: Math.random() < 0.4,
+                        special_needs: json.pet.special_needs || false,
+                        act_quickly: Math.random() < 0.4
                     }
                 })
             });
             this.filteredPets = this.pets;
             this.isLoading = false; 
             this.isError = false; 
-
-            console.log("pets", this.pets)
         } )
         .catch(err => { // handle errors
-        this.isLoading = false; 
-        this.isError = true;
+            this.isLoading = false; 
+            this.isError = true;
         });
+    },
+    //filter status
+    filterPets(filterStatus){
+        const filteredPets = filterStatus !== 'all' ? this.pets.filter(pet => pet.details[filterStatus] == true) : this.pets
+        this.filteredPets = [].concat(filteredPets)
+        console.log("updated", this.filteredPets)
     }
   })
   //filter scope
@@ -70,14 +72,13 @@ const globalScope = () => ({
     address: "",
     photoURL: "",
     //pet status
-    act_quickly: false,
-    special_needs: false,
+    actQuickly: false,
+    specialNeeds: false,
     adopted: false,
     isHeart: false,
     //methods
     heart(){
         this.isHeart = !this.isHeart;
-        console.log(this.isHeart)
     },
     initPet($el){
         const pet = JSON.parse($el.parentElement.dataset.pet)
@@ -89,21 +90,24 @@ const globalScope = () => ({
         this.photoURL = pet.large_results_photo_url
         //pet status
         this.adopted = pet.details.adopted
-        this.special_needs = pet.details.special_needs
-        this.act_quickly = pet.details.act_quickly
+        this.specialNeeds = pet.details.special_needs
+        this.actQuickly = pet.details.act_quickly
     },
     setStatusBackgroundColor(){
         if(this.adopted)
             return "bg-blue-default"
-        if(this.act_quickly)
+        if(this.actQuickly)
             return "bg-lemon-default"
     },
     setStatusText(){
         if(this.adopted)
             return "Adopted"
-        if(this.act_quickly)
-            return "Act quickly"
+        if(this.actQuickly)
+            return "Act Quickly"
         return "<span>&#8203;</span>"
+    },
+    showAge(){
+        return `${this.sex}, ${this.age}${this.specialNeeds ? "<span class='text-coral-default'>, Special Needs</span>" : ""}`
     }
   })
   //icon scope
